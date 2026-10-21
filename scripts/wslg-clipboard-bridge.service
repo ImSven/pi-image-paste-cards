@@ -1,0 +1,13 @@
+[Unit]
+Description=WSLg clipboard bridge: offer Windows screenshots (BMP) as PNG
+After=graphical-session.target
+
+[Service]
+Type=simple
+# Adjust the path if you copied the script elsewhere.
+ExecStart=%h/.local/bin/wslg-clipboard-bridge.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

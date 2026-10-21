@@ -1,0 +1,51 @@
+{
+  "name": "pi-image-paste-cards",
+  "version": "0.1.0",
+  "description": "Paste clipboard images into pi as real attachments, with OMP-style 📷 #N chips and rounded preview cards. Works in Windows Terminal/WSLg, Wayland, X11, and OSC 5522 terminals.",
+  "type": "module",
+  "license": "MIT",
+  "author": "ImSven",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "clipboard",
+    "image",
+    "paste",
+    "screenshot",
+    "wsl",
+    "wslg",
+    "attachments"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ImSven/pi-image-paste-cards.git"
+  },
+  "homepage": "https://github.com/ImSven/pi-image-paste-cards#readme",
+  "bugs": {
+    "url": "https://github.com/ImSven/pi-image-paste-cards/issues"
+  },
+  "files": [
+    "extensions/",
+    "lib/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/image-paste.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "test": "node --test --test-timeout=20000 test/*.test.mjs"
+  }
+}
