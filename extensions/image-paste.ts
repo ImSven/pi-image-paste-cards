@@ -3,7 +3,7 @@ import { getKeybindings, getNativeClipboard, matchesKey, type Component, type TU
 import type { ImageContent } from "@earendil-works/pi-ai";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { lstat, readdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +19,8 @@ import {
 } from "../lib/ui.ts";
 
 const MAX_BYTES = 50 * 1024 * 1024;
+const TEMP_PREFIX = "pi-image-paste-";
+const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 const IMAGE_MIMES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp"];
 const EXTENSIONS: Record<string, string> = {
   "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif",
@@ -218,8 +220,30 @@ export default function imagePaste(pi: ExtensionAPI) {
   // invalidating image encodings on every ordinary keystroke.
   const redraw = () => { tui?.requestRender(); };
   const manifestPath = () => context
-    ? join(tmpdir(), `pi-image-paste-draft-${context.sessionManager.getSessionId()}.json`) : undefined;
-  const validTempPath = (path: string) => new RegExp(`^${tmpdir().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/pi-(?:image-paste|clipboard)-[0-9a-f-]{36}\\.(?:png|jpg|webp|gif)$`).test(path);
+    ? join(tmpdir(), `${TEMP_PREFIX}draft-${context.sessionManager.getSessionId()}.json`) : undefined;
+  const validTempPath = (path: string) => new RegExp(`^${tmpdir().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/${TEMP_PREFIX}[0-9a-f-]{36}\\.(?:png|jpg|webp|gif)$`).test(path);
+
+  const dropFiles = async (paths: Iterable<string>) => {
+    for (const path of paths) {
+      createdFiles.delete(path);
+      await unlink(path).catch(() => {});
+    }
+  };
+  /** Delete leftovers from crashed or killed runs. Only our own file names are touched. */
+  const sweepStale = async () => {
+    let names: string[];
+    try { names = await readdir(tmpdir()); } catch { return; }
+    const cutoff = Date.now() - STALE_MS;
+    for (const name of names) {
+      if (!name.startsWith(TEMP_PREFIX)) continue;
+      const path = join(tmpdir(), name);
+      try {
+        const info = await lstat(path);
+        if (!info.isFile() || info.mtimeMs >= cutoff) continue;
+        await unlink(path);
+      } catch { /* already gone */ }
+    }
+  };
 
   const saveManifest = async () => {
     const path = manifestPath();
@@ -258,7 +282,7 @@ export default function imagePaste(pi: ExtensionAPI) {
   const stage = async (image: ImageBytes, token: number) => {
     image = await normalize(image.bytes);
     if (token !== epoch || !context) return;
-    const path = join(tmpdir(), `pi-image-paste-${randomUUID()}.${EXTENSIONS[image.mimeType]}`);
+    const path = join(tmpdir(), `${TEMP_PREFIX}${randomUUID()}.${EXTENSIONS[image.mimeType]}`);
     await writeFile(path, image.bytes, { mode: 0o600, flag: "wx" });
     if (token !== epoch || !context) { await unlink(path).catch(() => {}); return; }
     const draft = addDraft(image, path);
@@ -341,8 +365,16 @@ export default function imagePaste(pi: ExtensionAPI) {
     if (submittedIndex >= 0) {
       const [submitted] = submittedDrafts.splice(submittedIndex, 1);
       const active = new Set(activeDrafts().map((draft) => draft.attachment.id));
-      for (const id of submitted!.ids) if (!active.has(id)) drafts.delete(id);
+      const released: string[] = [];
+      for (const id of submitted!.ids) {
+        if (active.has(id)) continue;
+        const draft = drafts.get(id);
+        if (draft?.attachment.path) released.push(draft.attachment.path);
+        drafts.delete(id);
+      }
       if (!drafts.size) nextAttachmentId = 1;
+      // The sent message now owns the image bytes, so the draft copy is no longer needed.
+      void dropFiles(released);
     }
     redraw();
     void saveManifest();
@@ -378,6 +410,7 @@ export default function imagePaste(pi: ExtensionAPI) {
     if (ctx.mode !== "tui") return;
     context = ctx;
     epoch++;
+    void sweepStale();
     sentImages.clear();
     sentAssets.clear();
     for (const entry of ctx.sessionManager.getBranch()) {
@@ -541,7 +574,7 @@ export default function imagePaste(pi: ExtensionAPI) {
     decoratedEditor = undefined;
     // Keep hidden backing files and their mapping across /reload.
     if (event.reason !== "reload") {
-      for (const path of createdFiles) await unlink(path).catch(() => {});
+      await dropFiles([...createdFiles]);
       if (manifest) await unlink(manifest).catch(() => {});
       createdFiles.clear();
     }

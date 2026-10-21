@@ -92,7 +92,10 @@ Right-click a card to remove that attachment.
 ## How it works
 
 - **Clipboard read.** The extension tries Wayland (`wl-paste`) first, then X11 (`xclip`), then pi's native helper. An empty Wayland clipboard is authoritative, so stale X11 contents are never pasted. Pasted images are checked by their file signature, and BMP is converted to PNG.
-- **Storage.** Images are written to `$TMPDIR/pi-image-paste-<uuid>.<ext>` with mode `0600`. These files are deleted when pi quits or starts a new session, and kept across `/reload`.
+- **Storage.** Images are written to `$TMPDIR/pi-image-paste-<uuid>.<ext>` with mode `0600`, and are never part of your prompt text.
+  - The draft copy is deleted **as soon as the message is sent** — from then on the session file owns the bytes.
+  - Unsent drafts are deleted when pi quits or starts a new session, and kept across `/reload` so the draft survives it.
+  - Files left behind by a crashed or killed pi are swept at startup once they are older than 7 days. Only files named `pi-image-paste-*` are ever touched.
 - **Sending.** On submit, an `input` hook replaces each `📷 #N` chip with `[Image #N]` and attaches the image bytes. Only chips the extension created are converted, so other prompts and files are never touched.
 - **OSC 5522.** A small filter in front of pi's stdin parser assembles 5522 packets, because pi would otherwise read them as `Alt+]` and type base64 into the editor. All other input is passed through unchanged and in order.
 

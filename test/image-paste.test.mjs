@@ -295,11 +295,16 @@ test("sent images render as cards and preview entries recover on reload", async 
     const path = join(dir, "test.png");
     await writeFile(path, fixture);
     await h.extension.commands.get("paste-image").handler(path, h.ctx);
+    const backing = await h.draftFile();
     const result = await h.emit("input", { source: "interactive", text: h.text });
     h.ctx.ui.setEditorText("");
     assert.deepEqual(h.render(), []);
     const message = { role: "user", timestamp: 123456, content: [{ type: "text", text: result.text }, ...result.images] };
     await h.emit("message_end", { message });
+    // The message owns the bytes now, so the draft file must be gone immediately.
+    for (let n = 0; n < 100 && await access(backing).then(() => true, () => false); n++) await sleep(10);
+    await assert.rejects(access(backing));
+    await access(path); // the user's own source file is untouched
     assert.deepEqual(h.appendedEntries, [{ customType: "image-paste-preview", data: { timestamp: "123456", count: 1 } }]);
     const renderer = h.extension.entryRenderers.get("image-paste-preview");
     const card = renderer({ data: h.appendedEntries[0].data }, {}, h.theme);
@@ -312,6 +317,29 @@ test("sent images render as cards and preview entries recover on reload", async 
     assert.equal(recovered.render(100).length, 6);
     await restored.close();
   } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test("startup sweeps stale temp files from crashed runs only", async () => {
+  const { utimes } = await import("node:fs/promises");
+  const old = (days) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const stale = [join(tmpdir(), `pi-image-paste-${randomUUID()}.png`), join(tmpdir(), `pi-image-paste-draft-${randomUUID()}.json`)];
+  const fresh = join(tmpdir(), `pi-image-paste-${randomUUID()}.png`);
+  const foreign = join(tmpdir(), `pi-clipboard-${randomUUID()}.png`);
+  const oldForeign = join(tmpdir(), `other-tool-${randomUUID()}.png`);
+  for (const path of [...stale, foreign, oldForeign]) await writeFile(path, "x");
+  await writeFile(fresh, "x");
+  for (const path of [...stale, oldForeign]) await utimes(path, old(8), old(8));
+  try {
+    const h = await harness();
+    for (let n = 0; n < 100 && await access(stale[0]).then(() => true, () => false); n++) await sleep(10);
+    for (const path of stale) await assert.rejects(access(path), `${path} should be swept`);
+    await access(fresh);
+    await access(foreign);
+    await access(oldForeign);
+    await h.close();
+  } finally {
+    for (const path of [...stale, fresh, foreign, oldForeign]) await rm(path, { force: true });
+  }
 });
 
 test("BMP file path is converted to PNG without changing system clipboard", async () => {
