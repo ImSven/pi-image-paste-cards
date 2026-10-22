@@ -19,7 +19,7 @@ Out of the box, pi pastes an image by inserting a temporary file path into your 
 
 - **`Ctrl+V` / `Alt+V`** pastes the clipboard image as an attachment; text clipboards paste as text.
 - **Chips that behave like one character.** `📷 #N` is colored per image, and Backspace/Delete/undo treat it as a single unit. Deleting the chip removes the attachment and its card.
-- **Preview cards** show the image number and its pixel size. Terminals with inline graphics (Kitty, iTerm2) also show a thumbnail. Every other terminal, including Windows Terminal, shows the same card with an icon.
+- **Preview cards** show the image number and its pixel size. Terminals with inline graphics (Kitty, iTerm2) also attempt a thumbnail; everywhere else, including Windows Terminal, the card shows an icon. See [Status](#status) for what has actually been verified.
 - **Sent messages keep their cards** in the transcript, including after `/reload` and session resume.
 - **Works where pi's built-in paste does not**:
   - **Windows Terminal over WSL.** It turns `Ctrl+V` into an empty bracketed paste, which pi drops. This extension catches it.
@@ -28,6 +28,26 @@ Out of the box, pi pastes an image by inserting a temporary file path into your 
 - **Drafts survive `/reload`.** Pending attachments are restored, but only for the same session and only from files the extension wrote itself (mode `0600`).
 - **Enter waits for the paste.** If you press Enter while an image is still loading, the message is sent once the image is attached.
 - **Vision check.** If the current model does not accept images, the draft is kept and you get a warning instead of a silent drop.
+
+## Status
+
+Verified end-to-end on Linux (WSL2 + WSLg, Windows Terminal 1.24) with pi 1.3.0:
+
+| Area | Status |
+|---|---|
+| `Ctrl+V` / `Alt+V`, and the empty bracketed paste Windows Terminal sends | verified |
+| Clipboard read via Wayland (`wl-paste`) | verified |
+| WSLg screenshots through the bundled BMP→PNG bridge | verified |
+| `📷 #N` chip, rounded card, pixel-size caption, atomic delete and undo | verified |
+| Images sent as real bytes, vision check, draft surviving `/reload` | verified |
+| Temp-file cleanup (on send, on exit, 7-day sweep of leftovers) | verified |
+| Right-click removal of a draft card | unit-tested, fullscreen TUI mode only |
+| X11 (`xclip`) clipboard | not tested |
+| OSC 5522 terminal clipboard | parser unit-tested; no real terminal available to test |
+| Inline thumbnails (Kitty / iTerm2 graphics) | rendering unit-tested; not verified on a real terminal |
+| macOS / Windows native clipboard | not tested |
+
+If a row says "not tested", treat the feature as unproven rather than broken. Issues and results from other terminals are welcome.
 
 ## Install
 
@@ -59,7 +79,8 @@ When you copy an image in Windows, WSLg offers it to Linux only as `image/bmp`, 
 
 ```bash
 sudo apt install wl-clipboard imagemagick
-PKG="$(npm root -g)/pi-image-paste-cards"   # or ~/.pi/agent/npm/node_modules/pi-image-paste-cards
+# `pi install` puts the package here; with a global npm install use $(npm root -g) instead.
+PKG=~/.pi/agent/npm/node_modules/pi-image-paste-cards
 install -Dm755 "$PKG/scripts/wslg-clipboard-bridge.sh" ~/.local/bin/wslg-clipboard-bridge.sh
 install -Dm644 "$PKG/scripts/wslg-clipboard-bridge.service" ~/.config/systemd/user/wslg-clipboard-bridge.service
 systemctl --user daemon-reload
@@ -87,7 +108,7 @@ The extension also handles the empty paste that Windows Terminal sends for `Ctrl
 | `/paste-image-status` | Show diagnostics: trigger count, last trigger, last result |
 | `/paste-image-status trace` | Also record the last control-key sequence (never typed text). `off` stops it |
 
-Right-click a card to remove that attachment.
+Right-click a draft card above the editor to remove that attachment. This needs a mouse-aware terminal and pi's fullscreen TUI mode; in regular mode the terminal owns the mouse.
 
 ## How it works
 

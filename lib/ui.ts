@@ -170,6 +170,8 @@ export class AttachmentBand implements Component {
 
   handleMouse(event: TuiMouseEvent) {
     if (!this.remove || event.type !== "click" || event.button !== "right") return undefined;
+    // Only hit-test rows this component actually drew.
+    if (event.y < 0 || event.y >= this.lines.length) return undefined;
     const index = getCapabilities().images ? Math.floor(event.y / 7) : Math.floor(event.x / (CARD_COLS + GAP));
     const attachment = this.displayed[index];
     if (!attachment) return undefined;

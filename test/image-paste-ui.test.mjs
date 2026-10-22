@@ -95,6 +95,26 @@ test("real Pi editor treats the camera label as one grapheme, deletes and undoes
   assert.equal(editor.render, originalRender);
 });
 
+test("right-click on a draft card removes exactly that attachment", () => {
+  setCapabilities(noGraphics);
+  const removed = [];
+  const images = [attachment(1), attachment(2)];
+  const band = new AttachmentBand(() => images, () => undefined, theme, (id) => removed.push(id));
+  band.render(100); // the component only hit-tests what it last drew
+  const click = (x, y, button = "right", type = "click") =>
+    band.handleMouse({ type, button, x, y, screenX: x, screenY: y, width: 46, height: 6, shift: false, alt: false, ctrl: false });
+
+  assert.equal(click(2, 1, "left"), undefined, "left click must not remove");
+  assert.equal(click(2, 1, "right", "wheel"), undefined, "wheel must not remove");
+  assert.equal(click(2, 40), undefined, "clicks below the cards must be ignored");
+  assert.deepEqual(removed, []);
+
+  assert.equal(click(18, 1).handled, true, "second card");
+  assert.deepEqual(removed, [2]);
+  assert.equal(click(2, 1).handled, true, "first card");
+  assert.deepEqual(removed, [2, 1]);
+});
+
 test("token parser does not confuse #1 and #10 and handles duplicate references", () => {
   assert.deepEqual(imageTokens("📷 #1 text 📷 #10 📷 #1").map((token) => token.id), [1, 10, 1]);
 });
