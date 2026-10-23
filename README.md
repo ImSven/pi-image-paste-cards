@@ -21,8 +21,7 @@ Out of the box, pi pastes an image by inserting a temporary file path into your 
 - **Chips that behave like one character.** `📷 #N` is colored per image, and Backspace/Delete/undo treat it as a single unit. Deleting the chip removes the attachment and its card.
 - **Preview cards** show the image number and its pixel size. Terminals with inline graphics (Kitty, iTerm2) also attempt a thumbnail; everywhere else, including Windows Terminal, the card shows an icon. See [Status](#status) for what has actually been verified.
 - **Sent messages keep their cards** in the transcript, including after `/reload` and session resume.
-- **Works where pi's built-in paste does not**:
-  - **Windows Terminal over WSL.** It turns `Ctrl+V` into an empty bracketed paste, which pi drops. This extension catches it.
+- **`Ctrl+V` works as well as `Alt+V`.** On WSL, Windows Terminal intercepts `Ctrl+V` and sends an empty bracketed paste that pi's editor drops, which is why pi documents `Alt+V` for image paste there. This extension catches that empty paste, so either key works.
   - **[OSC 5522](https://sw.kovidgoyal.net/kitty/clipboard/) terminals.** Kitty streams clipboard data over the terminal protocol, and the extension reads it directly.
   - **Pasted or dragged image paths** (`.png .jpg .webp .gif .bmp`, `file://` URLs, and `C:\...` paths under WSL) become attachments.
 - **Drafts survive `/reload`.** Pending attachments are restored, but only for the same session and only from files the extension wrote itself (mode `0600`).
@@ -35,7 +34,7 @@ Verified end-to-end on Linux (WSL2 + WSLg, Windows Terminal 1.24) with pi 1.3.0:
 
 | Area | Status |
 |---|---|
-| `Ctrl+V` / `Alt+V`, and the empty bracketed paste Windows Terminal sends | verified |
+| `Ctrl+V` and `Alt+V`, including the empty bracketed paste Windows Terminal sends for `Ctrl+V` | verified |
 | Clipboard read via Wayland (`wl-paste`) | verified |
 | WSLg screenshots through the bundled BMP→PNG bridge | verified |
 | `📷 #N` chip, rounded card, pixel-size caption, atomic delete and undo | verified |

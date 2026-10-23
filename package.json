@@ -1,7 +1,7 @@
 {
   "name": "pi-image-paste-cards",
-  "version": "0.1.2",
-  "description": "Paste clipboard images into pi as real attachments, with OMP-style 📷 #N chips and rounded preview cards. Works in Windows Terminal/WSLg, Wayland, X11, and OSC 5522 terminals.",
+  "version": "0.1.3",
+  "description": "Paste clipboard images into pi as real attachments, with OMP-style 📷 #N chips and rounded preview cards, from Windows Terminal/WSLg, Wayland, X11 or an OSC 5522 terminal.",
   "type": "module",
   "license": "MIT",
   "author": "ImSven",
