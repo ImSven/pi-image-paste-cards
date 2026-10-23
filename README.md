@@ -13,7 +13,14 @@ Paste clipboard images into [pi](https://pi.dev) as **real image attachments**, 
  explain this error 📷 #1
 ```
 
-Out of the box, pi pastes an image by inserting a temporary file path into your prompt. This extension keeps the path out of the prompt entirely: the model receives the image itself, and the prompt only references it as `[Image #N]`.
+pi's own paste works, but it puts `/tmp/pi-clipboard-….png` in your prompt as text. This extension keeps the path out of the prompt entirely and gives the attachment a shape you can see and delete:
+
+| | pi alone | with this extension |
+|---|---|---|
+| Keys | `Alt+V` on WSL, because Windows Terminal swallows `Ctrl+V` | `Ctrl+V`, `Alt+V`, `/paste-image`, or paste an image path |
+| What the prompt shows | `/tmp/pi-clipboard-….png` | `📷 #1`; the path never appears |
+| Before you send | nothing | card with the pixel size; one keystroke or a right-click removes it |
+| After you send | the path text stays in the conversation | `[Image #N]` in the message, card above it |
 
 ## Features
 
