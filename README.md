@@ -2,16 +2,7 @@
 
 Paste clipboard images into [pi](https://pi.dev) as **real image attachments**, shown the way [oh-my-pi](https://github.com/can1357/oh-my-pi) shows them: a compact `📷 #1` chip in the editor and a rounded preview card above it.
 
-```
-╭── 📷 #1 ───╮
-│            │
-│     📷     │
-│            │
-│            │
-╰─ 901x200 ──╯
-──────────────────────────────────────
- explain this error 📷 #1
-```
+![A pasted image as a camera chip: rounded card reading 📷 #1 above the editor, with the image size 901x200 on the bottom border](https://raw.githubusercontent.com/ImSven/pi-image-paste-cards/master/docs/card.png)
 
 pi's own paste works, but it puts `/tmp/pi-clipboard-….png` in your prompt as text. This extension keeps the path out of the prompt entirely and gives the attachment a shape you can see and delete:
 
